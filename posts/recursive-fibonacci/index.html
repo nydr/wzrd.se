@@ -1,0 +1,147 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Recursive fibonacci with memoization | WZRD</title>
+    <meta name="description" content="" />
+    <meta name="HandheldFriendly" content="true" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="shortcut icon" href="/favicon.ico">
+    <link  rel="stylesheet" href="/css/screen.css" /><link  rel="stylesheet" href="//fonts.googleapis.com/css?family=Merriweather:300,700,700italic,300italic|Open+Sans:700,400" /><link  rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.2.0/styles/solarized-dark.min.css" />
+    
+  </head>
+  <body class="post-template nav-closed">
+    <div class="nav">
+    <h3 class="nav-title">Menu</h3>
+    <a href="#" class="nav-close">
+      <span class="hidden">Close</span>
+    </a>
+    <ul>
+      
+        <li class="nav-any" role="presentation">
+          <a href="/">Home</a>
+        </li>
+      
+        <li class="nav-any" role="presentation">
+          <a href="/about">About</a>
+        </li>
+      
+    </ul>
+    
+</div>
+<span class="nav-cover"></span>
+    <div class="site-wrapper">
+
+      <header class="main-header post-head" style="background-image: url(/img/Entrepierres_Sisteron_France-Noah_Basle.jpg)">
+  <nav class="main-nav overlay clearfix">
+    
+    
+      <a class="menu-button icon-menu" href="#"><span class="word">Menu</span></a>
+    
+  </nav>
+</header>
+
+<main class="content" role="main">
+  <article class="post">
+
+    <header class="post-header">
+      <h1 class="post-title">Recursive fibonacci with memoization</h1>
+      <section class="post-meta">
+        
+        <time class="post-date" datetime="2016-March-06">06 March 2016</time> 
+    <a href="/tags/programming">programming</a>
+
+      </section>
+    </header>
+    
+    <section class="post-content">
+      <p>Recursive functions can be used for when you have one big problem and want to split it up into many smaller problems or &quot;divide and conquer&quot; as it is commonly refered to.</p>
+<p>The fibonacci sequence is a popular example to use in recursive functions since the function calls mirrors the actual formula<sup><a href="#1">[1]</a></sup>. Below we have implemented a simple recursive function in golang.</p>
+<pre class="highlight"><code class="hljs go"><span class="hljs-keyword">func</span> fib_rec(number <span class="hljs-typename">int</span>) <span class="hljs-typename">int</span> {
+    <span class="hljs-keyword">if</span> number &lt;<span class="hljs-number"> 2</span> {
+        <span class="hljs-keyword">return</span> number;
+    }
+    <span class="hljs-keyword">return</span> fib_rec(number<span class="hljs-number">-2</span>) + fib_rec(number<span class="hljs-number">-1</span>)
+}
+<span class="hljs-comment">// Example 1 - Recursive fibonacci</span>
+</code></pre>
+<p>However in practice this could be considered an inefficient solution which leads to an unecessary amount of function calls since each function call for N&gt;2 will spawn two more function calls. One way of solving this is by the use of memoization<sup><a href="#2">[2]</a></sup>. Memoization an optimization technique more commonly known in functional programming languages but that doesn&#39;t mean we can&#39;t use it here. What it essentialy means is we&#39;re saving the output of any function call in memory and use that saved output instead of the function call for any repeated calls with the same input.</p>
+<pre class="highlight"><code class="hljs go"><span class="hljs-keyword">var</span> cache [N<span class="hljs-number">+1</span>]<span class="hljs-typename">int</span>
+cache<span class="hljs-number">[1</span>] =<span class="hljs-number"> 1</span>
+<span class="hljs-keyword">func</span> fib_mem(number <span class="hljs-typename">int</span>) <span class="hljs-typename">int</span> {
+    <span class="hljs-keyword">if</span> number &lt;<span class="hljs-number"> 2</span> {
+        <span class="hljs-keyword">return</span> number;
+    }
+    <span class="hljs-keyword">if</span> cache[number] ==<span class="hljs-number"> 0</span> { <span class="hljs-comment">// Save to cache if not set</span>
+        cache[number] = fib_mem(number<span class="hljs-number">-2</span>) + fib_mem(number<span class="hljs-number">-1</span>)
+    }
+    <span class="hljs-keyword">return</span> cache[number]
+}
+<span class="hljs-comment">// Example 2 - Recursive fibonacci with memoization</span>
+</code></pre>
+<p>To visualize this I&#39;ve made a tree where the number is the input parameter of a function call</p>
+<pre class="highlight"><code class="hljs no-highlight"> With memoization |      Without memoization
+------------------+---------------------------------
+                  |           __ 6 __
+                  |         /         \
+          6       |        4         _ 5 _
+         / \      |       / \       /     \
+        4   5     |      2   3     3       4
+       / \        |     /   / \   / \     / \
+      2   3       |    1   1   2 1   2   2   3
+     /   /        |           /     /   /   / \
+    1   1         |          1     1   1   1   2
+                  |                           /
+                  |                          1
+</code></pre>
+<p>As you may note F(1) is actually called twice, once from F(2) and once for F(3). This can easily be avoided by storing cache[1]=1 before starting the recursion and instead only return number if number==0 but even if we don&#39;t F(1) will only be called twice no matter how big N we&#39;re using, this because any subsequent calls to F(4) will just look up the memoized the output of F(4) instead of traversing further down the tree.
+Even if this reduction of function calls does not look huge, what we&#39;re really doing is reducing the complexity from O(2<sup>n</sup>)<sup><a href="#3">[3]</a></sup> to O(n) the benefit of which becomes more appearant the higher N, for each higher number of N we essentially need to copy the biggest branch of the existing tree and run through it all again, with memoization we&#39;re storing the result of each branch in that tree and use that cache to avoid function calls when the result is known from a previous calculation. If N was 50 we&#39;re talking many billions of function calls compared to 50.</p>
+<h2 id="iterative-solution">Iterative solution</h2>
+<p>Sometimes it&#39;s easy to get stuck into one mindset of solving a problem, in the case above it could be argued that using a standard iterative function is just as fast and easier to understand. In cases like that it can be worth taking a step back and rething the problem rather than just adding to it in order to solve the issue you have encountered.</p>
+<pre class="highlight"><code class="hljs go"><span class="hljs-keyword">func</span> fib_iter(number <span class="hljs-typename">int</span>) <span class="hljs-typename">int</span> {
+    first, second :=<span class="hljs-number"> 0</span>,<span class="hljs-number"> 1</span>
+    <span class="hljs-keyword">for</span> i :=<span class="hljs-number"> 0</span>; i &lt; number; i++ {
+        first, second = second, first+second
+    }
+    <span class="hljs-keyword">return</span> first
+}
+<span class="hljs-comment">// Example 3 - Iterative fibonacci</span>
+</code></pre>
+<h4 id="footnotes">Footnotes</h4>
+<ul>
+<li><a name="1">[1]</a>: F<sub>n</sub> = F<sub>n-1</sub> + F<sub>n-2</sub>, with seed values F<sub>0</sub> = 0, F<sub>1</sub> = 1</li>
+<li><a name="2">[2]</a>: Note the spelling memoization, not to be confused with memorization</li>
+<li><a name="3">[3]</a>: Closer to O(φ<sup>n</sup>) where φ is the golden ratio≈1.618, but that&#39;s not significantly relevant here</li>
+</ul>
+
+    </section>
+    
+    <footer class="post-footer">
+
+      
+
+      
+      
+
+    </footer>
+
+  </article>
+</main>
+
+<aside class="read-next">
+  
+    
+      
+      
+    
+  
+</aside>
+
+      <footer class="site-footer clearfix">
+        <section class="copyright"><a href="http://wzrd.se">WZRD</a> &copy; 2016</section>
+      </footer>
+
+    </div>
+    <script defer="defer"  src="//code.jquery.com/jquery-2.1.4.min.js"></script><script defer="defer"  src="/js/jquery.fitvids.js"></script><script defer="defer"  src="/js/index.js"></script>
+  </body>
+</html>
