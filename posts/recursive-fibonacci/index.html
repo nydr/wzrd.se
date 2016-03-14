@@ -71,7 +71,7 @@
 </code></pre>
 <p>However in practice this could be considered an inefficient solution which leads to an unecessary amount of function calls since each function call for N&gt;2 will spawn two more function calls. One way of solving this is by the use of memoization<sup><a href="#2">[2]</a></sup>. Memoization an optimization technique more commonly known in functional programming languages but that doesn&#39;t mean we can&#39;t use it here. What it essentialy means is we&#39;re saving the output of any function call in memory and use that saved output instead of the function call for any repeated calls with the same input.</p>
 <pre class="highlight"><code class="hljs go"><span class="hljs-keyword">var</span> cache [N<span class="hljs-number">+1</span>]<span class="hljs-typename">int</span>
-cache<span class="hljs-number">[1</span>] =<span class="hljs-number"> 1</span>
+
 <span class="hljs-keyword">func</span> fib_mem(number <span class="hljs-typename">int</span>) <span class="hljs-typename">int</span> {
     <span class="hljs-keyword">if</span> number &lt;<span class="hljs-number"> 2</span> {
         <span class="hljs-keyword">return</span> number;
@@ -100,8 +100,8 @@ cache<span class="hljs-number">[1</span>] =<span class="hljs-number"> 1</span>
 </code></pre>
 <p>As you may note F(1) is actually called twice, once from F(2) and once for F(3). This can easily be avoided by storing cache[1]=1 before starting the recursion and instead only return number if number==0 but even if we don&#39;t F(1) will only be called twice no matter how big N we&#39;re using, this because any subsequent calls to F(4) will just look up the memoized the output of F(4) instead of traversing further down the tree.
 Even if this reduction of function calls does not look huge, what we&#39;re really doing is reducing the complexity from O(2<sup>n</sup>)<sup><a href="#3">[3]</a></sup> to O(n) the benefit of which becomes more appearant the higher N, for each higher number of N we essentially need to copy the biggest branch of the existing tree and run through it all again, with memoization we&#39;re storing the result of each branch in that tree and use that cache to avoid function calls when the result is known from a previous calculation. If N was 50 we&#39;re talking many billions of function calls compared to 50.</p>
-<h2 id="iterative-solution">Iterative solution</h2>
-<p>Sometimes it&#39;s easy to get stuck into one mindset of solving a problem, in the case above it could be argued that using a standard iterative function is just as fast and easier to understand. In cases like that it can be worth taking a step back and rething the problem rather than just adding to it in order to solve the issue you have encountered.</p>
+<h2 id="other-solutions">Other solutions</h2>
+<p>As a sidenote it can be worth noting that using a standard iterative function can be considered just as fast and easier to understand. The Nth fibonacci can also more efficiently be solved by using various mathematical techniques: matrix exponetiation, fast doubling, or rounding but I consider that out of scope for this post.</p>
 <pre class="highlight"><code class="hljs go"><span class="hljs-keyword">func</span> fib_iter(number <span class="hljs-typename">int</span>) <span class="hljs-typename">int</span> {
     first, second :=<span class="hljs-number"> 0</span>,<span class="hljs-number"> 1</span>
     <span class="hljs-keyword">for</span> i :=<span class="hljs-number"> 0</span>; i &lt; number; i++ {
@@ -117,7 +117,19 @@ Even if this reduction of function calls does not look huge, what we&#39;re real
 <li><a name="2">[2]</a>: Note the spelling memoization, not to be confused with memorization</li>
 <li><a name="3">[3]</a>: Closer to O(φ<sup>n</sup>) where φ is the golden ratio≈1.618, but that&#39;s not significantly relevant here</li>
 </ul>
+<!---
+* <a name="4">[4]</a>: Fibonacci matrix exponentiation: 
+    $$\left[ \begin{matrix} 1 && 1 \\\\ 1 && 0 \end{matrix} \right]^n = \left[ \begin{matrix} F(n+1) && F(n) \\\\ F(n) && F(n-1) \end{matrix} \right]$$
+* <a name="5">[5]</a>: Fibonacci fast doubling:
+$$\begin{align}
+  F(2k) &= F(k) \left[ 2F(k+1) - F(k) \right]. \\\\
+  F(2k+1) &= F(k+1)^2 + F(k)^2.
+\end{align}$$
+* <a name="6">[6]</a>: Fibonacci rounding (rounded to closest integer): 
+    $$F_n=\bigg[\frac{\phi^n}{\sqrt 5}\bigg]$$
 
+<script type="text/javascript" async src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+-->
     </section>
     
     <footer class="post-footer">
