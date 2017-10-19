@@ -3,6 +3,11 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>http://wzrd.se/post/securing-a-sso/</loc>
+    <lastmod>2017-10-15T13:08:19+01:00</lastmod>
+  </url>
+  
+  <url>
     <loc>http://wzrd.se/post/recursive-fibonacci/</loc>
     <lastmod>2016-03-06T00:00:00+00:00</lastmod>
   </url>
@@ -18,12 +23,12 @@
   
   <url>
     <loc>http://wzrd.se/categories/code/</loc>
-    <lastmod>2016-03-06T00:00:00+00:00</lastmod>
+    <lastmod>2017-10-15T13:08:19+01:00</lastmod>
   </url>
   
   <url>
     <loc>http://wzrd.se/post/</loc>
-    <lastmod>2016-03-06T00:00:00+00:00</lastmod>
+    <lastmod>2017-10-15T13:08:19+01:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -34,7 +39,7 @@
   
   <url>
     <loc>http://wzrd.se/</loc>
-    <lastmod>2016-03-06T00:00:00+00:00</lastmod>
+    <lastmod>2017-10-15T13:08:19+01:00</lastmod>
     <priority>0</priority>
   </url>
   

@@ -5,10 +5,121 @@
 		<link>http://wzrd.se/post/</link>
 		<description>Recent content in Posts on WZRD</description>
 		<language>en-us</language>
-		<lastBuildDate>Sun, 06 Mar 2016 00:00:00 +0000</lastBuildDate>
+		<lastBuildDate>Sun, 15 Oct 2017 13:08:19 +0100</lastBuildDate>
 		
 		<atom:link href="http://wzrd.se/post/index.xml" rel="self" type="application/rss+xml" />
 		
+		
+		<item>
+			<title>Securing a SSO</title>
+			<link>http://wzrd.se/post/securing-a-sso/</link>
+			<pubDate>Sun, 15 Oct 2017 13:08:19 +0100</pubDate>
+			
+			<guid>http://wzrd.se/post/securing-a-sso/</guid>
+			<description>&lt;h3 id=&#34;overview&#34;&gt;Overview&lt;/h3&gt;
+
+&lt;p&gt;At first glance the application seemed like reasonably well architected software. It was straightforward and integrated well with the existing systems, there were multiple independent systems and to integrate them with the SSO was just a matter of verifying the token, the other details needed was handeled by the SSO. The user authentication process were fairly straigthforward:&lt;/p&gt;
+
+&lt;p&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-plain&#34; data-lang=&#34;plain&#34;&gt;&lt;span class=&#34;s1f40&#34;&gt;// User authentication process
+&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;.--------------------.   token  .--------------.     .----.
+&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;| service (verifier) | &amp;lt;------- | sso (issuer) | &amp;lt;-&amp;gt; | db |
+&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;&amp;#39;--------------------&amp;#39;          &amp;#39;--------------&amp;#39;     &amp;#39;----&amp;#39;
+&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;          |                             ^
+&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;          |                             |login
+&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;          |                             |
+&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;          | authenticated session   .------.
+&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;          &amp;#39;-----------------------&amp;gt; | user |
+&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;                                    &amp;#39;------&amp;#39;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;The service requiring authentication redirects the user to the SSO, the user logs in using the SSO which redirects the user to the service endpoint with a token, this token is verified by the service and is used to give the user appropiate access level via an authenticated session.&lt;/p&gt;
+
+&lt;p&gt;One issue with the SSO was that it was a central piece of software that was working, but noone at the company had any experience working with it so there was a strong aversion to make any changes to it. It&amp;rsquo;s quite common to be afraid to make changes to central systems, especially when they appear to be working and there&amp;rsquo;s no experience working with it. The problem is that when it comes to security things can often appear to be working but actually be broken in much more subtle ways and relying on a central software that is not well understood by the team often turns out to be riskier than making updates to it.&lt;/p&gt;
+
+&lt;h3 id=&#34;securing-the-environment&#34;&gt;Securing the environment&lt;/h3&gt;
+
+&lt;p&gt;When a service is not well understood, it can be useful to start by mapping and securing the environment around it rather than changing the service directly. Make sure it can be run it as a unprivileged user in an isolated environment and put any internal routes behind a IP whitelist. Specify exact version of dependencies, look at the dependencies for known vulnerabilities. Save a tagged version of the build and attempt to run it elsewhere. Once confident you can launch the current version of the service anywhere it should be possible to make small incremental changes without fear.&lt;/p&gt;
+
+&lt;h3 id=&#34;mysql-injection&#34;&gt;MySQL injection&lt;/h3&gt;
+
+&lt;p&gt;The first code issue encountered was a sql injection. This is one of the first things to look for as it&amp;rsquo;s fairly easy to spot and can be devestating. Most SQL libraries worth using have this protection built-in and all queries except one were using such protections.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-javascript&#34; data-lang=&#34;javascript&#34;&gt;&lt;span class=&#34;s3e8&#34;&gt;const&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;column&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;sfa0&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;req&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;body&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;column&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;;&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;&lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;query&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt;`
+&lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt;	INSERT INTO
+&lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt;		table (id, &lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt;${&lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;column&lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt;)
+&lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt;	VALUES(?, ?)
+&lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt;	ON DUPLICATE KEY
+&lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt;		UPDATE SET &lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt;${&lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;column&lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt; = ?`&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;	&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;id&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;value&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;value&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;);&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;ss4&#34;&gt;// (This is a bad idea)&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;The creator wanted a function where he could pass any column and have that inserted, presumably to increase reusability but this is purely speculative.
+Because the library protects against injections it wouldn&amp;rsquo;t let anyone pass a column, so the developer &amp;ldquo;fixed&amp;rdquo; this by simply injecting the string without any verification. SQL injections is a huge issue as it can potentially make the user able to read and modify all the data in the system meaning: All the sensitive data is exposed, you can&amp;rsquo;t trust the data left there to be accurate, even with sufficiently securely hashed passwords it would be trivial to generate a new hash and use that to impersonate any other user in the system.
+Luckily the vulnerable route was behind an administrative login so the access were limited but it&amp;rsquo;s a dangerous thing to keep around.
+The quickest fix for this was to make sure that column is one of a pre-approved list of strings before executing the query.&lt;/p&gt;
+
+&lt;h3 id=&#34;password-using-insecure-md5&#34;&gt;Password using insecure md5&lt;/h3&gt;
+
+&lt;p&gt;The passwords in the database were hashed and uniquely salted. The problem is the hashing algorithm used was md5 and the salt was only 2 characters long, to make matters worse it was a hexadecimal &lt;code&gt;[0-9a-f]&lt;/code&gt; string so it contained a total of a single byte of entropy (256 unique combinations) which would barely slow down a brute force attack.&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Why is it important to hash passwords?&lt;/em&gt;
+If for any reason the database contents would be leaked (e.g. from mysql injection, dishonest employee, insecure servers or backups) then this information could be used to impersonate any user in the system. If the user were using this password anywhere else then it could be used to impersonate the user on that system as well. A one-way-hash can be used to store passwords in a way where it&amp;rsquo;s possible to verify that the user entered the correct password without storing the actual password by comparing hashes.&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;What is a hashing function?&lt;/em&gt;
+A hashing function is used to take a string and return a fixed length hash &lt;code&gt;string -[hash function]-&amp;gt; hash&lt;/code&gt;. Given the same hash function the same string should always result in the same hash. A good hashing algorithm gives good confidence the output for any given input is unique for the use-case. When a hashing algorithm is being used for passwords it should also needs assurances that reversing the hash is expensive. This is achieved by having no known weaknesses in the algorithm, there should be no patterns to it&amp;rsquo;s behaviour, the output should appear as random. Additionally it should have a non-neglible cost of computing a hash, if it&amp;rsquo;s feasible to do millions or even billions of hashes per second for a single actor it won&amp;rsquo;t take long to brute force most passwords by testing all possible combinations up to a certain length. The biggest problem in using md5 for a hashing algorithm for passwords is how fast computers are at computing md5 hashes, it is not uncommon for a single machine to compute billions of hashes per second making even very secure passwords crackable.&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Why is it important to salt passwords?&lt;/em&gt;
+A salt is a random string of characters used to add to the password string entropy, typically you generate a new salt for each password and store them in plaintext with the password. Without a salt each user with the same password would end up having the same hash and it would make rainbow table attacks where you have a dictionary of the resulting hashes from a given number of strings useful.&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;How should I store passwords?&lt;/em&gt;
+The answer to this question is going to change over time, as computers become more sophisticated and weaknesses are discovered. Good choices for algorithms as of 2017 are Argon2, bcrypt, scrypt, Catena, Lyra2, Makawa, yescrypt, or PBKDF2 tuned so the computation of a single hash is non-neglible. The passwords should always be salted and the salt should be at least 32 bytes long, up to as long as the resulting hash. It is also important to restrict access to the database and its backups which can often be overlooked.&lt;/p&gt;
+
+&lt;h3 id=&#34;jwt&#34;&gt;JWT&lt;/h3&gt;
+
+&lt;p&gt;A Json Web Token (JWT) is a URL-safe string that can be used to send verifyable data between two endpoints.&lt;/p&gt;
+
+&lt;p&gt;It has the format &lt;code&gt;{header}.{payload}.{signature}&lt;/code&gt; where header contains information about the format and algorithm, payload contains the data and signature is the signature verifying the integrity of the payload.&lt;/p&gt;
+
+&lt;p&gt;One pitfall to avoid is that just because it&amp;rsquo;s cryptographly signed does not mean it&amp;rsquo;s encrypted, the data is possible to decode by anyone without a secret, the signature is just there to verify that the data is the same data that the issuer signed. This means the data is secured against tampering, not listening. While it&amp;rsquo;s possible to encrypt the payload as well it was uneccessary in this case as no secret data was being sent with the token but it is very important to be aware of the differences.&lt;/p&gt;
+
+&lt;h4 id=&#34;insecure-secret&#34;&gt;Insecure secret&lt;/h4&gt;
+
+&lt;p&gt;The JWT were using a symmetric algorithm, this means both parties (issuer (SSO) and verifier (System using the SSO) share the same secret key. This means both the issuer and verifier can sign valid keys so any verifier can sign a key for another verifier, depending on the platform this might not be ideal. Another option would be to use an asymmetric algorthm where the issuer has a private and public key where the private key is used to sign the payload and the public key can be used to verify the payload. This has an advantage where you don&amp;rsquo;t need to trust all the verifier endpoints and you can make the public key easily accessible making key rotations easier as the verifiers can download an updated public key on demand.&lt;/p&gt;
+
+&lt;p&gt;Symmetric algorithms are generally good enough in cases where you can trust both the issuers and verifiers but one blaring issue is using an insecure key. There&amp;rsquo;s no need to type or remember this key so it should not be something memorable or easy to type, automatically generate a secret that is much longer than regular passwords and then use a completely different one in production. Brute forcing a secret can be done offline by taking any valid token reading it&amp;rsquo;s payload and generating signatures of that payload by trying different secrets until a matching token is generated. After that secret is found it&amp;rsquo;s possible to create and sign any tokens as if it were generated from the SSO.&lt;/p&gt;
+
+&lt;p&gt;Imagine the following token&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-json&#34; data-lang=&#34;json&#34;&gt;&lt;span class=&#34;s1388&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;	&lt;/span&gt;&lt;span class=&#34;s7e2&#34;&gt;&amp;#34;id&amp;#34;&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;:&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt;&amp;#34;1234567890&amp;#34;&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;	&lt;/span&gt;&lt;span class=&#34;s7e2&#34;&gt;&amp;#34;name&amp;#34;&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;:&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt;&amp;#34;John Doe&amp;#34;&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;	&lt;/span&gt;&lt;span class=&#34;s7e2&#34;&gt;&amp;#34;admin&amp;#34;&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;:&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s3e8&#34;&gt;false&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
+&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+&lt;p&gt;The only thing preventing a user from changing admin from false to true, or changing id to whichever user they wish to impersonate is a valid signature, if the user has access to the secret this safeguard is gone and the token is not more secure than trusting arbitrary json recieved.&lt;/p&gt;
+
+&lt;h4 id=&#34;token-reuse&#34;&gt;Token reuse&lt;/h4&gt;
+
+&lt;p&gt;Imagine the token above, each time a user with the same id, name and permission logs in they will be issued exactly the same token and it will be considered valid.&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;If the user changes password - Old token is still valid&lt;/li&gt;
+&lt;li&gt;If the user logs out - Old token is still valid&lt;/li&gt;
+&lt;li&gt;If the user changes name - Old token is still valid (with the old name)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;This means if the user has once logged in on the system on any machine that token can be used by anyone to impersonate that user forever.&lt;/p&gt;
+
+&lt;p&gt;A common way to tackle this is to use the issued at (iat) claim which is a unix timestamp from when the token were generated, this is added as a field as part of the payload and is therefore signed and verified in the same way. This timestamp can then be used by the verifier to ensure the timestamp is not older than an age the verifier considers acceptable. It is preferrable to always use an expiration time (exp) claim where the issuer decided the longest time a signature of a token should be valid after which it should be treated as invalid&lt;/p&gt;
+
+&lt;h3 id=&#34;wildcard-redirect&#34;&gt;Wildcard Redirect&lt;/h3&gt;
+
+&lt;p&gt;The method the SSO were using for redirecting to a service was a query param with the destination, it would then redirect to this server appending the authentication token. A flaw in this approach is there was no validation for the destination and any user who had logged in previously would automatically get redirected with a token to the destination. This made it possible for an attacker to load the url &lt;code&gt;http://sso.example.com?redirect=http://evil.example.com&lt;/code&gt; as an hidden image on a page the target were visiting and it would get requests to &lt;code&gt;http://evil.example.com?token={valid token}&lt;/code&gt; without any user interaction. Then the owner of evil.example.com could use that token to authenticate on any site the target had access to. A domain whitelist can be used to only redirect to trusted servers. If some servers are considered untrusted it&amp;rsquo;s important to use different secrets between them or a public/private algorithm in addition to a per domain audience (aud) as part of the token.&lt;/p&gt;
+
+&lt;h3 id=&#34;summary&#34;&gt;Summary&lt;/h3&gt;
+
+&lt;p&gt;This was a service that was as far as anyone was concerned working as intended. Upon inspection noted multiple issues that each critical on their own could cause even more havoc together, the wildcard redirect could be used to get an admin token which would never expire to access the admin page and do mysql injections. It is useful to work on security in layers, even if it&amp;rsquo;s not obvious how a misuse of a feature could be abused it&amp;rsquo;s useful to restrict as much as possible, in particular when dealing with sensitive data.&lt;/p&gt;</description>
+		</item>
 		
 		<item>
 			<title>Recursive fibonacci with memoization</title>
