@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+	
+    
+        
+        <meta name="twitter:card" content="summary_large_image"/>
+        <meta name="twitter:image" content="/post/recursive-fibonacci/Entrepierres_Sisteron_France-Noah_Basle.jpg"/>
+    
+
+
+
+<meta name="twitter:title" content="Recursive fibonacci with memoization"/>
+<meta name="twitter:description" content=""/>
+<meta name="twitter:site" content="@"/>
+
+
+
+	<meta property="og:title" content="Recursive fibonacci with memoization &middot; WZRD" />
+  	<meta property="og:site_name" content="WZRD" />
+  	<meta property="og:url" content="http://wzrd.se/post/recursive-fibonacci/" />
+
+    
+       <meta property="og:image" content="/post/recursive-fibonacci/Entrepierres_Sisteron_France-Noah_Basle.jpg"/>
+    
+
+    
+    <meta property="og:description" content="" />
+  	<meta property="og:type" content="article" />
+    <meta property="article:published_time" content="2016-03-06T00:00:00Z" />
+
+    
+    
+
+    <title>Recursive fibonacci with memoization &middot; WZRD</title>
+
+    
+    <meta name="description" content="&lt;p&gt;Recursive functions can be used for when you have one big problem and want to split it up into many smaller problems or &amp;ldquo;divide and conquer&amp;rdquo; as i" />
+    
+
+    <meta name="HandheldFriendly" content="True" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <link rel="shortcut icon" href="/favicon.ico">
+	
+
+    <link rel="stylesheet" type="text/css" href="/css/screen.css" />
+    <link rel="stylesheet" type="text/css" href="/css/nav.css" />
+    <link rel="stylesheet" type="text/css" href="/css/custom.css" />
+
+    
+
+    
+
+    
+      
+          <link href="/index.xml" rel="alternate" type="application/rss+xml" title="WZRD" />
+      
+      
+    
+
+    <link rel="canonical" href="http://wzrd.se/post/recursive-fibonacci/" />
+
+    
+      
+    
+    <script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "publisher": {
+        "@type": "Organization",
+        "name": 
+    },
+    "author": {
+        "@type": "Person",
+        "name": ,
+        
+        "url": ,
+        "sameAs": [
+            
+            
+             
+             
+             
+             
+             
+            
+        ]
+    },
+    "headline": Recursive fibonacci with memoization,
+    "name": Recursive fibonacci with memoization,
+    "wordCount": 613,
+    "timeRequired": "PT3M",
+    "inLanguage": {
+      "@type": "Language",
+      "alternateName": en
+    },
+    "url": http://wzrd.se/post/recursive-fibonacci/,
+    "datePublished": 2016-03-06T00:00Z,
+    "dateModified": 2016-03-06T00:00Z,
+    
+    "image": {
+        "@type": "ImageObject",
+        "url": http://wzrd.se/post/recursive-fibonacci/Entrepierres_Sisteron_France-Noah_Basle.jpg,
+        "width": 3000,
+        "height": 1445
+    },
+    
+    
+    "description": ,
+    "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": http://wzrd.se/post/recursive-fibonacci/
+    }
+}
+    </script>
+    
+
+
+    
+
+    
+
+    
+</head>
+<body class="nav-closed">
+
+  <div class="nav">
+    <h3 class="nav-title">Menu</h3>
+    <a href="#" class="nav-close">
+        <span class="hidden">Close</span>
+    </a>
+    <ul>
+        
+        
+        
+            
+            <li class="nav-opened" role="presentation">
+            	<a href="/">Home</a>
+            </li>
+        
+            
+            <li class="nav-opened" role="presentation">
+            	<a href="/about/">About</a>
+            </li>
+        
+            
+            <li class="nav-opened" role="presentation">
+            	<a href="/categories/code/">Code</a>
+            </li>
+        
+        
+    </ul>
+
+    
+    <a class="subscribe-button icon-feed" href="/index.xml">Subscribe</a>
+    
+</div>
+<span class="nav-cover"></span>
+
+
+ <div class="site-wrapper">
+
+
+
+  
+  <header class="main-header post-head" style="background-image: url(/post/recursive-fibonacci/Entrepierres_Sisteron_France-Noah_Basle.jpg)">
+  
+  <nav class="main-nav overlay clearfix">
+
+
+  
+  
+      <a class="menu-button" href="#"><span class="burger">&#9776;</span><span class="word">Menu</span></a>
+  
+  </nav>
+</header>
+
+
+
+<main class="content" role="main">
+
+
+
+
+  <article class="post post">
+
+    <header class="post-header">
+        <h1 class="post-title">Recursive fibonacci with memoization</h1>
+        <small></small>
+
+        <section class="post-meta">
+        
+          <time class="post-date" datetime="2016-03-06T00:00:00Z">
+            Mar 6, 2016
+          </time>
+        
+         
+        </section>
+    </header>
+
+    <section class="post-content">
+      <p>Recursive functions can be used for when you have one big problem and want to split it up into many smaller problems or &ldquo;divide and conquer&rdquo; as it is commonly refered to.</p>
+
+<p>The fibonacci sequence is a popular example to use in recursive functions since the function calls mirrors the actual formula<sup><a href="#1">[1]</a></sup>. Below we have implemented a simple recursive function in golang.</p>
+
+<p></p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="s1770">// Example 1 - Recursive fibonacci
+</span><span class="s1770"></span><span class="s3e8">func</span><span class="s1f40"> </span><span class="s7df">fib_rec</span><span class="s1388">(</span><span class="s7df">number</span><span class="s1f40"> </span><span class="s3e8">int</span><span class="s1388">)</span><span class="s1f40"> </span><span class="s3e8">int</span><span class="s1f40"> </span><span class="s1388">{</span><span class="s1f40">
+</span><span class="s1f40">    </span><span class="s3e8">if</span><span class="s1f40"> </span><span class="s7df">number</span><span class="s1f40"> </span><span class="s1388">&lt;</span><span class="s1f40"> </span><span class="sc80">2</span><span class="s1f40"> </span><span class="s1388">{</span><span class="s1f40">
+</span><span class="s1f40">        </span><span class="s3e8">return</span><span class="s1f40"> </span><span class="s7df">number</span><span class="s1388">;</span><span class="s1f40">
+</span><span class="s1f40">    </span><span class="s1388">}</span><span class="s1f40">
+</span><span class="s1f40">    </span><span class="s3e8">return</span><span class="s1f40"> </span><span class="s7df">fib_rec</span><span class="s1388">(</span><span class="s7df">number</span><span class="sfa0">-</span><span class="sc80">2</span><span class="s1388">)</span><span class="s1f40"> </span><span class="sfa0">+</span><span class="s1f40"> </span><span class="s7df">fib_rec</span><span class="s1388">(</span><span class="s7df">number</span><span class="sfa0">-</span><span class="sc80">1</span><span class="s1388">)</span><span class="s1f40">
+</span><span class="s1f40"></span><span class="s1388">}</span></code></pre>
+</div>
+<p>However in practice this could be considered an inefficient solution which leads to an unecessary amount of function calls since each function call for N&gt;2 will spawn two more function calls. One way of solving this is by the use of memoization<sup><a href="#2">[2]</a></sup>. Memoization an optimization technique more commonly known in functional programming languages but that doesn&rsquo;t mean we can&rsquo;t use it here. What it essentialy means is we&rsquo;re saving the output of any function call in memory and use that saved output instead of the function call for any repeated calls with the same input.</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="s1770">// Example 2 - Recursive fibonacci with memoization
+</span><span class="s1770"></span><span class="s3e8">var</span><span class="s1f40"> </span><span class="s7df">cache</span><span class="s1f40"> </span><span class="s1388">[</span><span class="s7df">N</span><span class="sfa0">+</span><span class="sc80">1</span><span class="s1388">]</span><span class="s3e8">int</span><span class="s1f40">
+</span><span class="s1f40">
+</span><span class="s1f40"></span><span class="s3e8">func</span><span class="s1f40"> </span><span class="s7df">fib_mem</span><span class="s1388">(</span><span class="s7df">number</span><span class="s1f40"> </span><span class="s3e8">int</span><span class="s1388">)</span><span class="s1f40"> </span><span class="s3e8">int</span><span class="s1f40"> </span><span class="s1388">{</span><span class="s1f40">
+</span><span class="s1f40">    </span><span class="s3e8">if</span><span class="s1f40"> </span><span class="s7df">number</span><span class="s1f40"> </span><span class="s1388">&lt;</span><span class="s1f40"> </span><span class="sc80">2</span><span class="s1f40"> </span><span class="s1388">{</span><span class="s1f40">
+</span><span class="s1f40">        </span><span class="s3e8">return</span><span class="s1f40"> </span><span class="s7df">number</span><span class="s1388">;</span><span class="s1f40">
+</span><span class="s1f40">    </span><span class="s1388">}</span><span class="s1f40">
+</span><span class="s1f40">    </span><span class="s3e8">if</span><span class="s1f40"> </span><span class="s7df">cache</span><span class="s1388">[</span><span class="s7df">number</span><span class="s1388">]</span><span class="s1f40"> </span><span class="sfa0">==</span><span class="s1f40"> </span><span class="sc80">0</span><span class="s1f40"> </span><span class="s1388">{</span><span class="s1f40"> </span><span class="s1770">// Save to cache if not set
+</span><span class="s1770"></span><span class="s1f40">        </span><span class="s7df">cache</span><span class="s1388">[</span><span class="s7df">number</span><span class="s1388">]</span><span class="s1f40"> </span><span class="s1388">=</span><span class="s1f40"> </span><span class="s7df">fib_mem</span><span class="s1388">(</span><span class="s7df">number</span><span class="sfa0">-</span><span class="sc80">2</span><span class="s1388">)</span><span class="s1f40"> </span><span class="sfa0">+</span><span class="s1f40"> </span><span class="s7df">fib_mem</span><span class="s1388">(</span><span class="s7df">number</span><span class="sfa0">-</span><span class="sc80">1</span><span class="s1388">)</span><span class="s1f40">
+</span><span class="s1f40">    </span><span class="s1388">}</span><span class="s1f40">
+</span><span class="s1f40">    </span><span class="s3e8">return</span><span class="s1f40"> </span><span class="s7df">cache</span><span class="s1388">[</span><span class="s7df">number</span><span class="s1388">]</span><span class="s1f40">
+</span><span class="s1f40"></span><span class="s1388">}</span></code></pre>
+</div>
+<p>To visualize this I&rsquo;ve made a tree where the number is the input parameter of a function call</p>
+<div class="highlight"><pre class="chroma"><code class="language-text" data-lang="text"><span class="s1f40"> With memoization |      Without memoization
+</span><span class="s1f40">------------------+---------------------------------
+</span><span class="s1f40">                  |          ____ 6 ____
+</span><span class="s1f40">                  |         /           \
+</span><span class="s1f40">          6       |        4           _ 5 _
+</span><span class="s1f40">         / \      |       / \         /     \
+</span><span class="s1f40">        4   5     |      2   3       3       4
+</span><span class="s1f40">       / \        |     /   / \     / \     / \
+</span><span class="s1f40">      2   3       |    1   1   2   1   2   2   3
+</span><span class="s1f40">     /   /        |           /       /   /   / \
+</span><span class="s1f40">    1   1         |          1       1   1   1   2
+</span><span class="s1f40">                  |                             /
+</span><span class="s1f40">                  |                            1</span></code></pre>
+</div>
+<p>As you may note F(1) is actually called twice, once from F(2) and once for F(3). This can easily be avoided by storing cache[1]=1 before starting the recursion and instead only return number if number==0 but even if we don&rsquo;t F(1) will only be called twice no matter how big N we&rsquo;re using, this because any subsequent calls to F(4) will just look up the memoized the output of F(4) instead of traversing further down the tree.
+Even if this reduction of function calls does not look huge, what we&rsquo;re really doing is reducing the complexity from O(2<sup>n</sup>)<sup><a href="#3">[3]</a></sup> to O(n) the benefit of which becomes more appearant the higher N, for each higher number of N we essentially need to copy the biggest branch of the existing tree and run through it all again, with memoization we&rsquo;re storing the result of each branch in that tree and use that cache to avoid function calls when the result is known from a previous calculation. If N was 50 we&rsquo;re talking many billions of function calls compared to 50.</p>
+
+<h2 id="other-solutions">Other solutions</h2>
+
+<p>As a sidenote it can be worth noting that using a standard iterative function can be considered just as fast and easier to understand. The Nth fibonacci can also more efficiently be solved by using various mathematical techniques: matrix exponetiation, fast doubling, or rounding but I consider that out of scope for this post.</p>
+<div class="highlight"><pre class="chroma"><code class="language-go" data-lang="go"><span class="s1770">// Example 3 - Iterative fibonacci
+</span><span class="s1770"></span><span class="s3e8">func</span><span class="s1f40"> </span><span class="s7df">fib_iter</span><span class="s1388">(</span><span class="s7df">number</span><span class="s1f40"> </span><span class="s3e8">int</span><span class="s1388">)</span><span class="s1f40"> </span><span class="s3e8">int</span><span class="s1f40"> </span><span class="s1388">{</span><span class="s1f40">
+</span><span class="s1f40">    </span><span class="s7df">first</span><span class="s1388">,</span><span class="s1f40"> </span><span class="s7df">second</span><span class="s1f40"> </span><span class="sfa0">:=</span><span class="s1f40"> </span><span class="sc80">0</span><span class="s1388">,</span><span class="s1f40"> </span><span class="sc80">1</span><span class="s1f40">
+</span><span class="s1f40">    </span><span class="s3e8">for</span><span class="s1f40"> </span><span class="s7df">i</span><span class="s1f40"> </span><span class="sfa0">:=</span><span class="s1f40"> </span><span class="sc80">0</span><span class="s1388">;</span><span class="s1f40"> </span><span class="s7df">i</span><span class="s1f40"> </span><span class="s1388">&lt;</span><span class="s1f40"> </span><span class="s7df">number</span><span class="s1388">;</span><span class="s1f40"> </span><span class="s7df">i</span><span class="sfa0">++</span><span class="s1f40"> </span><span class="s1388">{</span><span class="s1f40">
+</span><span class="s1f40">        </span><span class="s7df">first</span><span class="s1388">,</span><span class="s1f40"> </span><span class="s7df">second</span><span class="s1f40"> </span><span class="s1388">=</span><span class="s1f40"> </span><span class="s7df">second</span><span class="s1388">,</span><span class="s1f40"> </span><span class="s7df">first</span><span class="sfa0">+</span><span class="s7df">second</span><span class="s1f40">
+</span><span class="s1f40">    </span><span class="s1388">}</span><span class="s1f40">
+</span><span class="s1f40">    </span><span class="s3e8">return</span><span class="s1f40"> </span><span class="s7df">first</span><span class="s1f40">
+</span><span class="s1f40"></span><span class="s1388">}</span></code></pre>
+</div>
+<h4 id="footnotes">Footnotes</h4>
+
+<ul>
+<li><a name="1">[1]</a>: F<sub>n</sub> = F<sub>n-1</sub> + F<sub>n-2</sub>, with seed values F<sub>0</sub> = 0, F<sub>1</sub> = 1</li>
+<li><a name="2">[2]</a>: Note the spelling memoization, not to be confused with memorization</li>
+<li><a name="3">[3]</a>: Closer to O(φ<sup>n</sup>) where φ is the golden ratio≈1.618, but that&rsquo;s not significantly relevant here</li>
+</ul>
+
+<!---
+* <a name="4">[4]</a>: Fibonacci matrix exponentiation: 
+    $$\left[ \begin{matrix} 1 && 1 \\\\ 1 && 0 \end{matrix} \right]^n = \left[ \begin{matrix} F(n+1) && F(n) \\\\ F(n) && F(n-1) \end{matrix} \right]$$
+* <a name="5">[5]</a>: Fibonacci fast doubling:
+$$\begin{align}
+  F(2k) &= F(k) \left[ 2F(k+1) - F(k) \right]. \\\\
+  F(2k+1) &= F(k+1)^2 + F(k)^2.
+\end{align}$$
+* <a name="6">[6]</a>: Fibonacci rounding (rounded to closest integer): 
+    $$F_n=\bigg[\frac{\phi^n}{\sqrt 5}\bigg]$$
+
+<script type="text/javascript" async src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+-->
+    </section>
+
+
+  <footer class="post-footer">
+
+
+    
+
+
+
+
+    
+
+
+    
+
+
+
+
+
+
+
+  </footer>
+</article>
+
+</main>
+
+
+  <aside class="read-next">
+  
+  
+</aside>
+
+
+
+    <footer class="site-footer clearfix">
+        <section class="copyright"><a href="">WZRD</a> </section>
+        
+    </footer>
+    </div>
+    <script type="text/javascript" src="/js/jquery.js"></script>
+    <script type="text/javascript" src="/js/jquery.fitvids.js"></script>
+    <script type="text/javascript" src="/js/index.js"></script>
+    
+</body>
+</html>
+
