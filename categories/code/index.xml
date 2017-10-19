@@ -11,11 +11,11 @@
 		
 		
 		<item>
-			<title>Securing a SSO</title>
-			<link>http://wzrd.se/post/securing-a-sso/</link>
+			<title>Securing an SSO</title>
+			<link>http://wzrd.se/post/securing-an-sso/</link>
 			<pubDate>Sun, 15 Oct 2017 13:08:19 +0100</pubDate>
 			
-			<guid>http://wzrd.se/post/securing-a-sso/</guid>
+			<guid>http://wzrd.se/post/securing-an-sso/</guid>
 			<description>&lt;h3 id=&#34;overview&#34;&gt;Overview&lt;/h3&gt;
 
 &lt;p&gt;At first glance the application seemed like reasonably well architected software. It was straightforward and integrated well with the existing systems, there were multiple independent systems and to integrate them with the SSO was just a matter of verifying the token, the other details needed was handeled by the SSO. The user authentication process were fairly straigthforward:&lt;/p&gt;
