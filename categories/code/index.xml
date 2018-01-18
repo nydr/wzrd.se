@@ -16,23 +16,20 @@
 			<pubDate>Sun, 15 Oct 2017 13:08:19 +0100</pubDate>
 			
 			<guid>http://wzrd.se/post/securing-an-sso/</guid>
-			<description>&lt;h3 id=&#34;overview&#34;&gt;Overview&lt;/h3&gt;
-
-&lt;p&gt;At first glance the application seemed like reasonably well architected software. It was straightforward and integrated well with the existing systems, there were multiple independent systems and to integrate them with the SSO was just a matter of verifying the token, the other details needed was handeled by the SSO. The user authentication process were fairly straigthforward:&lt;/p&gt;
+			<description>&lt;p&gt;At first glance the application seemed like reasonably well architected software. It was straightforward and integrated well with the existing systems, there were multiple independent systems and to integrate them with the SSO was just a matter of verifying the token, the other details needed was handeled by the SSO. The user authentication process were fairly straigthforward:&lt;/p&gt;
 
 &lt;p&gt;&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-plain&#34; data-lang=&#34;plain&#34;&gt;&lt;span class=&#34;s1f40&#34;&gt;// User authentication process
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;.--------------------.   token  .--------------.     .----.
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;| service (verifier) | &amp;lt;------- | sso (issuer) | &amp;lt;-&amp;gt; | db |
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;&amp;#39;--------------------&amp;#39;          &amp;#39;--------------&amp;#39;     &amp;#39;----&amp;#39;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;          |                             ^
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;          |                             |login
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;          |                             |
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;          | authenticated session   .------.
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;          &amp;#39;-----------------------&amp;gt; | user |
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;                                    &amp;#39;------&amp;#39;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-plain&#34; data-lang=&#34;plain&#34;&gt;// User authentication process
+
+.--------------------.   token  .--------------.     .----.
+| service (verifier) | &amp;lt;------- | sso (issuer) | &amp;lt;-&amp;gt; | db |
+&amp;#39;--------------------&amp;#39;          &amp;#39;--------------&amp;#39;     &amp;#39;----&amp;#39;
+          |                             ^
+          |                             |login
+          |                             |
+          | authenticated session   .------.
+          &amp;#39;-----------------------&amp;gt; | user |
+                                    &amp;#39;------&amp;#39;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;The service requiring authentication redirects the user to the SSO, the user logs in using the SSO which redirects the user to the service endpoint with a token, this token is verified by the service and is used to give the user appropiate access level via an authenticated session.&lt;/p&gt;
 
 &lt;p&gt;One issue with the SSO was that it was a central piece of software that was working, but noone at the company had any experience working with it so there was a strong aversion to make any changes to it. It&amp;rsquo;s quite common to be afraid to make changes to central systems, especially when they appear to be working and there&amp;rsquo;s no experience working with it. The problem is that when it comes to security things can often appear to be working but actually be broken in much more subtle ways and relying on a central software that is not well understood by the team often turns out to be riskier than making updates to it.&lt;/p&gt;
@@ -44,16 +41,15 @@
 &lt;h3 id=&#34;mysql-injection&#34;&gt;MySQL injection&lt;/h3&gt;
 
 &lt;p&gt;The first code issue encountered was a sql injection. This is one of the first things to look for as it&amp;rsquo;s fairly easy to spot and can be devestating. Most SQL libraries worth using have this protection built-in and all queries except one were using such protections.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-javascript&#34; data-lang=&#34;javascript&#34;&gt;&lt;span class=&#34;s3e8&#34;&gt;const&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;column&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;sfa0&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;req&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;body&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;column&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;;&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;&lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;query&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt;`
-&lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt;	INSERT INTO
-&lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt;		table (id, &lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt;${&lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;column&lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt;)
-&lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt;	VALUES(?, ?)
-&lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt;	ON DUPLICATE KEY
-&lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt;		UPDATE SET &lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt;${&lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;column&lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt; = ?`&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;	&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;id&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;value&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;value&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;);&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;ss4&#34;&gt;// (This is a bad idea)&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-javascript&#34; data-lang=&#34;javascript&#34;&gt;&lt;span class=&#34;k&#34;&gt;const&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;column&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;req&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;nx&#34;&gt;body&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;.&lt;/span&gt;&lt;span class=&#34;nx&#34;&gt;column&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
+&lt;span class=&#34;nx&#34;&gt;query&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;sb&#34;&gt;`
+&lt;/span&gt;&lt;span class=&#34;sb&#34;&gt;	INSERT INTO
+&lt;/span&gt;&lt;span class=&#34;sb&#34;&gt;		table (id, &lt;/span&gt;&lt;span class=&#34;si&#34;&gt;${&lt;/span&gt;&lt;span class=&#34;nx&#34;&gt;column&lt;/span&gt;&lt;span class=&#34;si&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;sb&#34;&gt;)
+&lt;/span&gt;&lt;span class=&#34;sb&#34;&gt;	VALUES(?, ?)
+&lt;/span&gt;&lt;span class=&#34;sb&#34;&gt;	ON DUPLICATE KEY
+&lt;/span&gt;&lt;span class=&#34;sb&#34;&gt;		UPDATE SET &lt;/span&gt;&lt;span class=&#34;si&#34;&gt;${&lt;/span&gt;&lt;span class=&#34;nx&#34;&gt;column&lt;/span&gt;&lt;span class=&#34;si&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;sb&#34;&gt; = ?`&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+	&lt;span class=&#34;p&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;nx&#34;&gt;id&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;value&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;value&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;]&lt;/span&gt;
+&lt;span class=&#34;p&#34;&gt;);&lt;/span&gt; &lt;span class=&#34;err&#34;&gt;// (This is a bad idea)&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;The creator wanted a function where he could pass any column and have that inserted, presumably to increase reusability but this is purely speculative.
 Because the library protects against injections it wouldn&amp;rsquo;t let anyone pass a column, so the developer &amp;ldquo;fixed&amp;rdquo; this by simply injecting the string without any verification. SQL injections is a huge issue as it can potentially make the user able to read and modify all the data in the system meaning: All the sensitive data is exposed, you can&amp;rsquo;t trust the data left there to be accurate, even with sufficiently securely hashed passwords it would be trivial to generate a new hash and use that to impersonate any other user in the system.
 Luckily the vulnerable route was behind an administrative login so the access were limited but it&amp;rsquo;s a dangerous thing to keep around.
@@ -90,12 +86,11 @@ The answer to this question is going to change over time, as computers become mo
 &lt;p&gt;Symmetric algorithms are generally good enough in cases where you can trust both the issuers and verifiers but one blaring issue is using an insecure key. There&amp;rsquo;s no need to type or remember this key so it should not be something memorable or easy to type, automatically generate a secret that is much longer than regular passwords and then use a completely different one in production. Brute forcing a secret can be done offline by taking any valid token reading it&amp;rsquo;s payload and generating signatures of that payload by trying different secrets until a matching token is generated. After that secret is found it&amp;rsquo;s possible to create and sign any tokens as if it were generated from the SSO.&lt;/p&gt;
 
 &lt;p&gt;Imagine the following token&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-json&#34; data-lang=&#34;json&#34;&gt;&lt;span class=&#34;s1388&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;	&lt;/span&gt;&lt;span class=&#34;s7e2&#34;&gt;&amp;#34;id&amp;#34;&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;:&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt;&amp;#34;1234567890&amp;#34;&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;	&lt;/span&gt;&lt;span class=&#34;s7e2&#34;&gt;&amp;#34;name&amp;#34;&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;:&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;sc1c&#34;&gt;&amp;#34;John Doe&amp;#34;&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;	&lt;/span&gt;&lt;span class=&#34;s7e2&#34;&gt;&amp;#34;admin&amp;#34;&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;:&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s3e8&#34;&gt;false&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-json&#34; data-lang=&#34;json&#34;&gt;&lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+	&lt;span class=&#34;nt&#34;&gt;&amp;#34;id&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;1234567890&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+	&lt;span class=&#34;nt&#34;&gt;&amp;#34;name&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;s2&#34;&gt;&amp;#34;John Doe&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt;
+	&lt;span class=&#34;nt&#34;&gt;&amp;#34;admin&amp;#34;&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;:&lt;/span&gt; &lt;span class=&#34;kc&#34;&gt;false&lt;/span&gt;
+&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;The only thing preventing a user from changing admin from false to true, or changing id to whichever user they wish to impersonate is a valid signature, if the user has access to the secret this safeguard is gone and the token is not more secure than trusting arbitrary json recieved.&lt;/p&gt;
 
 &lt;h4 id=&#34;token-reuse&#34;&gt;Token reuse&lt;/h4&gt;
@@ -129,82 +124,70 @@ The answer to this question is going to change over time, as computers become mo
 			<guid>http://wzrd.se/post/recursive-fibonacci/</guid>
 			<description>&lt;p&gt;Recursive functions can be used for when you have one big problem and want to split it up into many smaller problems or &amp;ldquo;divide and conquer&amp;rdquo; as it is commonly refered to.&lt;/p&gt;
 
-&lt;p&gt;The fibonacci sequence is a popular example to use in recursive functions since the function calls mirrors the actual formula&lt;sup&gt;&lt;a href=&#34;#1&#34;&gt;[1]&lt;/a&gt;&lt;/sup&gt;. Below we have implemented a simple recursive function in golang.&lt;/p&gt;
+&lt;p&gt;The fibonacci sequence is a popular example to use in recursive functions since the function calls mirrors the actual formula&lt;sup class=&#34;footnote-ref&#34; id=&#34;fnref:1&#34;&gt;&lt;a rel=&#34;footnote&#34; href=&#34;#fn:1&#34;&gt;1&lt;/a&gt;&lt;/sup&gt;. Below we have implemented a simple recursive function in golang.&lt;/p&gt;
 
 &lt;p&gt;&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span class=&#34;s1770&#34;&gt;// Example 1 - Recursive fibonacci
-&lt;/span&gt;&lt;span class=&#34;s1770&#34;&gt;&lt;/span&gt;&lt;span class=&#34;s3e8&#34;&gt;func&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;fib_rec&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;number&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s3e8&#34;&gt;int&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s3e8&#34;&gt;int&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;s3e8&#34;&gt;if&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;number&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;sc80&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;s3e8&#34;&gt;return&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;number&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;;&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;s3e8&#34;&gt;return&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;fib_rec&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;number&lt;/span&gt;&lt;span class=&#34;sfa0&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;sc80&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;sfa0&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;fib_rec&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;number&lt;/span&gt;&lt;span class=&#34;sfa0&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;sc80&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-&lt;p&gt;However in practice this could be considered an inefficient solution which leads to an unecessary amount of function calls since each function call for N&amp;gt;2 will spawn two more function calls. One way of solving this is by the use of memoization&lt;sup&gt;&lt;a href=&#34;#2&#34;&gt;[2]&lt;/a&gt;&lt;/sup&gt;. Memoization an optimization technique more commonly known in functional programming languages but that doesn&amp;rsquo;t mean we can&amp;rsquo;t use it here. What it essentialy means is we&amp;rsquo;re saving the output of any function call in memory and use that saved output instead of the function call for any repeated calls with the same input.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span class=&#34;s1770&#34;&gt;// Example 2 - Recursive fibonacci with memoization
-&lt;/span&gt;&lt;span class=&#34;s1770&#34;&gt;&lt;/span&gt;&lt;span class=&#34;s3e8&#34;&gt;var&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;cache&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;N&lt;/span&gt;&lt;span class=&#34;sfa0&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;sc80&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;s3e8&#34;&gt;int&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;&lt;/span&gt;&lt;span class=&#34;s3e8&#34;&gt;func&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;fib_mem&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;number&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s3e8&#34;&gt;int&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s3e8&#34;&gt;int&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;s3e8&#34;&gt;if&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;number&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;sc80&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;s3e8&#34;&gt;return&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;number&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;;&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;s3e8&#34;&gt;if&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;cache&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;number&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;sfa0&#34;&gt;==&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;sc80&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s1770&#34;&gt;// Save to cache if not set
-&lt;/span&gt;&lt;span class=&#34;s1770&#34;&gt;&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;cache&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;number&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;fib_mem&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;number&lt;/span&gt;&lt;span class=&#34;sfa0&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;sc80&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;sfa0&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;fib_mem&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;number&lt;/span&gt;&lt;span class=&#34;sfa0&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;sc80&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;s3e8&#34;&gt;return&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;cache&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;number&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span class=&#34;c1&#34;&gt;// Example 1 - Recursive fibonacci
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;kd&#34;&gt;func&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;fib_rec&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nx&#34;&gt;number&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;int&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;int&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+    &lt;span class=&#34;k&#34;&gt;if&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;number&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;2&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;k&#34;&gt;return&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;number&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
+    &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+    &lt;span class=&#34;k&#34;&gt;return&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;fib_rec&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nx&#34;&gt;number&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;+&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;fib_rec&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nx&#34;&gt;number&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;
+&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;However in practice this could be considered an inefficient solution which leads to an unecessary amount of function calls since each function call for N&amp;gt;2 will spawn two more function calls. One way of solving this is by the use of memoization&lt;sup class=&#34;footnote-ref&#34; id=&#34;fnref:2&#34;&gt;&lt;a rel=&#34;footnote&#34; href=&#34;#fn:2&#34;&gt;2&lt;/a&gt;&lt;/sup&gt;. Memoization an optimization technique more commonly known in functional programming languages but that doesn&amp;rsquo;t mean we can&amp;rsquo;t use it here. What it essentialy means is we&amp;rsquo;re saving the output of any function call in memory and use that saved output instead of the function call for any repeated calls with the same input.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span class=&#34;c1&#34;&gt;// Example 2 - Recursive fibonacci with memoization
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;kd&#34;&gt;var&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;cache&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;nx&#34;&gt;N&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;]&lt;/span&gt;&lt;span class=&#34;kt&#34;&gt;int&lt;/span&gt;
+
+&lt;span class=&#34;kd&#34;&gt;func&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;fib_mem&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nx&#34;&gt;number&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;int&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;int&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+    &lt;span class=&#34;k&#34;&gt;if&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;number&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;2&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;k&#34;&gt;return&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;number&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt;
+    &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+    &lt;span class=&#34;k&#34;&gt;if&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;cache&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;nx&#34;&gt;number&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;==&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt; &lt;span class=&#34;c1&#34;&gt;// Save to cache if not set
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;        &lt;span class=&#34;nx&#34;&gt;cache&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;nx&#34;&gt;number&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;]&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;fib_mem&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nx&#34;&gt;number&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;2&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;+&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;fib_mem&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nx&#34;&gt;number&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;-&lt;/span&gt;&lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt;
+    &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+    &lt;span class=&#34;k&#34;&gt;return&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;cache&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;[&lt;/span&gt;&lt;span class=&#34;nx&#34;&gt;number&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;]&lt;/span&gt;
+&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
 &lt;p&gt;To visualize this I&amp;rsquo;ve made a tree where the number is the input parameter of a function call&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-text&#34; data-lang=&#34;text&#34;&gt;&lt;span class=&#34;s1f40&#34;&gt; With memoization |      Without memoization
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;------------------+---------------------------------
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;                  |          ____ 6 ____
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;                  |         /           \
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;          6       |        4           _ 5 _
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;         / \      |       / \         /     \
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;        4   5     |      2   3       3       4
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;       / \        |     /   / \     / \     / \
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;      2   3       |    1   1   2   1   2   2   3
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;     /   /        |           /       /   /   / \
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;    1   1         |          1       1   1   1   2
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;                  |                             /
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;                  |                            1&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-&lt;p&gt;As you may note F(1) is actually called twice, once from F(2) and once for F(3). This can easily be avoided by storing cache[1]=1 before starting the recursion and instead only return number if number==0 but even if we don&amp;rsquo;t F(1) will only be called twice no matter how big N we&amp;rsquo;re using, this because any subsequent calls to F(4) will just look up the memoized the output of F(4) instead of traversing further down the tree.
-Even if this reduction of function calls does not look huge, what we&amp;rsquo;re really doing is reducing the complexity from O(2&lt;sup&gt;n&lt;/sup&gt;)&lt;sup&gt;&lt;a href=&#34;#3&#34;&gt;[3]&lt;/a&gt;&lt;/sup&gt; to O(n) the benefit of which becomes more appearant the higher N, for each higher number of N we essentially need to copy the biggest branch of the existing tree and run through it all again, with memoization we&amp;rsquo;re storing the result of each branch in that tree and use that cache to avoid function calls when the result is known from a previous calculation. If N was 50 we&amp;rsquo;re talking many billions of function calls compared to 50.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-text&#34; data-lang=&#34;text&#34;&gt; With memoization |      Without memoization
+------------------+---------------------------------
+                  |          ____ 6 ____
+                  |         /           \
+          6       |        4           _ 5 _
+         / \      |       / \         /     \
+        4   5     |      2   3       3       4
+       / \        |     /   / \     / \     / \
+      2   3       |    1   1   2   1   2   2   3
+     /   /        |           /       /   /   / \
+    1   1         |          1       1   1   1   2
+                  |                             /
+                  |                            1&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;As you may note F(1) is actually called twice, once from F(2) and once for F(3). This can easily be avoided by storing cache&lt;a href=&#34;1&#34; title=&#34;F&amp;lt;sub&amp;gt;n&amp;lt;/sub&amp;gt; = F&amp;lt;sub&amp;gt;n-1&amp;lt;/sub&amp;gt; + F&amp;lt;sub&amp;gt;n-2&amp;lt;/sub&amp;gt;, with seed values F&amp;lt;sub&amp;gt;0&amp;lt;/sub&amp;gt; = 0, F&amp;lt;sub&amp;gt;1&amp;lt;/sub&amp;gt; = 1
+&#34;&gt;1&lt;/a&gt;=1 before starting the recursion and instead only return number if number==0 but even if we don&amp;rsquo;t F(1) will only be called twice no matter how big N we&amp;rsquo;re using, this because any subsequent calls to F(4) will just look up the memoized the output of F(4) instead of traversing further down the tree.
+Even if this reduction of function calls does not look huge, what we&amp;rsquo;re really doing is reducing the complexity from O(2&lt;sup&gt;n&lt;/sup&gt;)&lt;sup class=&#34;footnote-ref&#34; id=&#34;fnref:3&#34;&gt;&lt;a rel=&#34;footnote&#34; href=&#34;#fn:3&#34;&gt;3&lt;/a&gt;&lt;/sup&gt; to O(n) the benefit of which becomes more appearant the higher N, for each higher number of N we essentially need to copy the biggest branch of the existing tree and run through it all again, with memoization we&amp;rsquo;re storing the result of each branch in that tree and use that cache to avoid function calls when the result is known from a previous calculation. If N was 50 we&amp;rsquo;re talking many billions of function calls compared to 50.&lt;/p&gt;
 
 &lt;h2 id=&#34;other-solutions&#34;&gt;Other solutions&lt;/h2&gt;
 
 &lt;p&gt;As a sidenote it can be worth noting that using a standard iterative function can be considered just as fast and easier to understand. The Nth fibonacci can also more efficiently be solved by using various mathematical techniques: matrix exponetiation, fast doubling, or rounding but I consider that out of scope for this post.&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span class=&#34;s1770&#34;&gt;// Example 3 - Iterative fibonacci
-&lt;/span&gt;&lt;span class=&#34;s1770&#34;&gt;&lt;/span&gt;&lt;span class=&#34;s3e8&#34;&gt;func&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;fib_iter&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;number&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s3e8&#34;&gt;int&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;)&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s3e8&#34;&gt;int&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;first&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;second&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;sfa0&#34;&gt;:=&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;sc80&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;sc80&#34;&gt;1&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;s3e8&#34;&gt;for&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;i&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;sfa0&#34;&gt;:=&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;sc80&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;;&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;i&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;number&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;;&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;i&lt;/span&gt;&lt;span class=&#34;sfa0&#34;&gt;++&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;{&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;        &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;first&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;second&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;=&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;second&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;,&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;first&lt;/span&gt;&lt;span class=&#34;sfa0&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;second&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;}&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;    &lt;/span&gt;&lt;span class=&#34;s3e8&#34;&gt;return&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt; &lt;/span&gt;&lt;span class=&#34;s7df&#34;&gt;first&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;
-&lt;/span&gt;&lt;span class=&#34;s1f40&#34;&gt;&lt;/span&gt;&lt;span class=&#34;s1388&#34;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;/div&gt;
-&lt;h4 id=&#34;footnotes&#34;&gt;Footnotes&lt;/h4&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre class=&#34;chroma&#34;&gt;&lt;code class=&#34;language-go&#34; data-lang=&#34;go&#34;&gt;&lt;span class=&#34;c1&#34;&gt;// Example 3 - Iterative fibonacci
+&lt;/span&gt;&lt;span class=&#34;c1&#34;&gt;&lt;/span&gt;&lt;span class=&#34;kd&#34;&gt;func&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;fib_iter&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;(&lt;/span&gt;&lt;span class=&#34;nx&#34;&gt;number&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;int&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;)&lt;/span&gt; &lt;span class=&#34;kt&#34;&gt;int&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+    &lt;span class=&#34;nx&#34;&gt;first&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;second&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;:=&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;1&lt;/span&gt;
+    &lt;span class=&#34;k&#34;&gt;for&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;i&lt;/span&gt; &lt;span class=&#34;o&#34;&gt;:=&lt;/span&gt; &lt;span class=&#34;mi&#34;&gt;0&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;i&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;number&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;;&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;i&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;++&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;{&lt;/span&gt;
+        &lt;span class=&#34;nx&#34;&gt;first&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;second&lt;/span&gt; &lt;span class=&#34;p&#34;&gt;=&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;second&lt;/span&gt;&lt;span class=&#34;p&#34;&gt;,&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;first&lt;/span&gt;&lt;span class=&#34;o&#34;&gt;+&lt;/span&gt;&lt;span class=&#34;nx&#34;&gt;second&lt;/span&gt;
+    &lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;
+    &lt;span class=&#34;k&#34;&gt;return&lt;/span&gt; &lt;span class=&#34;nx&#34;&gt;first&lt;/span&gt;
+&lt;span class=&#34;p&#34;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div class=&#34;footnotes&#34;&gt;
 
-&lt;ul&gt;
-&lt;li&gt;&lt;a name=&#34;1&#34;&gt;[1]&lt;/a&gt;: F&lt;sub&gt;n&lt;/sub&gt; = F&lt;sub&gt;n-1&lt;/sub&gt; + F&lt;sub&gt;n-2&lt;/sub&gt;, with seed values F&lt;sub&gt;0&lt;/sub&gt; = 0, F&lt;sub&gt;1&lt;/sub&gt; = 1&lt;/li&gt;
-&lt;li&gt;&lt;a name=&#34;2&#34;&gt;[2]&lt;/a&gt;: Note the spelling memoization, not to be confused with memorization&lt;/li&gt;
-&lt;li&gt;&lt;a name=&#34;3&#34;&gt;[3]&lt;/a&gt;: Closer to O(φ&lt;sup&gt;n&lt;/sup&gt;) where φ is the golden ratio≈1.618, but that&amp;rsquo;s not significantly relevant here&lt;/li&gt;
-&lt;/ul&gt;
+&lt;hr /&gt;
 
-&lt;!---
-* &lt;a name=&#34;4&#34;&gt;[4]&lt;/a&gt;: Fibonacci matrix exponentiation: 
-    $$\left[ \begin{matrix} 1 &amp;&amp; 1 \\\\ 1 &amp;&amp; 0 \end{matrix} \right]^n = \left[ \begin{matrix} F(n+1) &amp;&amp; F(n) \\\\ F(n) &amp;&amp; F(n-1) \end{matrix} \right]$$
-* &lt;a name=&#34;5&#34;&gt;[5]&lt;/a&gt;: Fibonacci fast doubling:
-$$\begin{align}
-  F(2k) &amp;= F(k) \left[ 2F(k+1) - F(k) \right]. \\\\
-  F(2k+1) &amp;= F(k+1)^2 + F(k)^2.
-\end{align}$$
-* &lt;a name=&#34;6&#34;&gt;[6]&lt;/a&gt;: Fibonacci rounding (rounded to closest integer): 
-    $$F_n=\bigg[\frac{\phi^n}{\sqrt 5}\bigg]$$
-
-&lt;script type=&#34;text/javascript&#34; async src=&#34;https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-MML-AM_CHTML&#34;&gt;&lt;/script&gt;
---&gt;</description>
+&lt;ol&gt;
+&lt;li id=&#34;fn:1&#34;&gt;F&lt;sub&gt;n&lt;/sub&gt; = F&lt;sub&gt;n-1&lt;/sub&gt; + F&lt;sub&gt;n-2&lt;/sub&gt;, with seed values F&lt;sub&gt;0&lt;/sub&gt; = 0, F&lt;sub&gt;1&lt;/sub&gt; = 1
+ &lt;a class=&#34;footnote-return&#34; href=&#34;#fnref:1&#34;&gt;&lt;sup&gt;[return]&lt;/sup&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li id=&#34;fn:2&#34;&gt;Note the spelling memoization, not to be confused with memorization
+ &lt;a class=&#34;footnote-return&#34; href=&#34;#fnref:2&#34;&gt;&lt;sup&gt;[return]&lt;/sup&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;li id=&#34;fn:3&#34;&gt;Closer to O(φ&lt;sup&gt;n&lt;/sup&gt;) where φ is the golden ratio≈1.618, but that&amp;rsquo;s not significantly relevant here
+ &lt;a class=&#34;footnote-return&#34; href=&#34;#fnref:3&#34;&gt;&lt;sup&gt;[return]&lt;/sup&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/div&gt;</description>
 		</item>
 		
 	</channel>

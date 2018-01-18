@@ -8,7 +8,7 @@
     
         
         <meta name="twitter:card" content="summary_large_image"/>
-        <meta name="twitter:image" content="/post/securing-an-sso/lock-boxes.jpg"/>
+        <meta name="twitter:image" content="/post/securing-an-sso/lock-boxes-by-samuel-zeller.jpg"/>
     
 
 
@@ -24,7 +24,7 @@
   	<meta property="og:url" content="http://wzrd.se/post/securing-an-sso/" />
 
     
-       <meta property="og:image" content="/post/securing-an-sso/lock-boxes.jpg"/>
+       <meta property="og:image" content="/post/securing-an-sso/lock-boxes-by-samuel-zeller.jpg"/>
     
 
     
@@ -38,9 +38,7 @@
     <title>Securing an SSO &middot; WZRD</title>
 
     
-    <meta name="description" content="&lt;h3 id=&#34;overview&#34;&gt;Overview&lt;/h3&gt;
-
-&lt;p&gt;At first glance the application seemed like reasonably well architected software. It was straightforward and integrated well" />
+    <meta name="description" content="&lt;p&gt;At first glance the application seemed like reasonably well architected software. It was straightforward and integrated well with the existing systems, there" />
     
 
     <meta name="HandheldFriendly" content="True" />
@@ -95,7 +93,7 @@
     },
     "headline": Securing an SSO,
     "name": Securing an SSO,
-    "wordCount": 2021,
+    "wordCount": 2036,
     "timeRequired": "PT10M",
     "inLanguage": {
       "@type": "Language",
@@ -107,7 +105,7 @@
     
     "image": {
         "@type": "ImageObject",
-        "url": http://wzrd.se/post/securing-an-sso/lock-boxes.jpg,
+        "url": http://wzrd.se/post/securing-an-sso/lock-boxes-by-samuel-zeller.jpg,
         "width": 3000,
         "height": 1445
     },
@@ -152,7 +150,7 @@
         
             
             <li class="nav-opened" role="presentation">
-            	<a href="/categories/code/">Code</a>
+            	<a href="/post/">Posts</a>
             </li>
         
         
@@ -170,7 +168,7 @@
 
 
   
-  <header class="main-header post-head" style="background-image: url(/post/securing-an-sso/lock-boxes.jpg)">
+  <header class="main-header post-head" style="background-image: url(/post/securing-an-sso/lock-boxes-by-samuel-zeller.jpg)">
   
   <nav class="main-nav overlay clearfix">
 
@@ -206,23 +204,20 @@
     </header>
 
     <section class="post-content">
-      <h3 id="overview">Overview</h3>
-
-<p>At first glance the application seemed like reasonably well architected software. It was straightforward and integrated well with the existing systems, there were multiple independent systems and to integrate them with the SSO was just a matter of verifying the token, the other details needed was handeled by the SSO. The user authentication process were fairly straigthforward:</p>
+      <p>At first glance the application seemed like reasonably well architected software. It was straightforward and integrated well with the existing systems, there were multiple independent systems and to integrate them with the SSO was just a matter of verifying the token, the other details needed was handeled by the SSO. The user authentication process were fairly straigthforward:</p>
 
 <p></p>
-<div class="highlight"><pre class="chroma"><code class="language-plain" data-lang="plain"><span class="s1f40">// User authentication process
-</span><span class="s1f40">
-</span><span class="s1f40">.--------------------.   token  .--------------.     .----.
-</span><span class="s1f40">| service (verifier) | &lt;------- | sso (issuer) | &lt;-&gt; | db |
-</span><span class="s1f40">&#39;--------------------&#39;          &#39;--------------&#39;     &#39;----&#39;
-</span><span class="s1f40">          |                             ^
-</span><span class="s1f40">          |                             |login
-</span><span class="s1f40">          |                             |
-</span><span class="s1f40">          | authenticated session   .------.
-</span><span class="s1f40">          &#39;-----------------------&gt; | user |
-</span><span class="s1f40">                                    &#39;------&#39;</span></code></pre>
-</div>
+<div class="highlight"><pre class="chroma"><code class="language-plain" data-lang="plain">// User authentication process
+
+.--------------------.   token  .--------------.     .----.
+| service (verifier) | &lt;------- | sso (issuer) | &lt;-&gt; | db |
+&#39;--------------------&#39;          &#39;--------------&#39;     &#39;----&#39;
+          |                             ^
+          |                             |login
+          |                             |
+          | authenticated session   .------.
+          &#39;-----------------------&gt; | user |
+                                    &#39;------&#39;</code></pre></div>
 <p>The service requiring authentication redirects the user to the SSO, the user logs in using the SSO which redirects the user to the service endpoint with a token, this token is verified by the service and is used to give the user appropiate access level via an authenticated session.</p>
 
 <p>One issue with the SSO was that it was a central piece of software that was working, but noone at the company had any experience working with it so there was a strong aversion to make any changes to it. It&rsquo;s quite common to be afraid to make changes to central systems, especially when they appear to be working and there&rsquo;s no experience working with it. The problem is that when it comes to security things can often appear to be working but actually be broken in much more subtle ways and relying on a central software that is not well understood by the team often turns out to be riskier than making updates to it.</p>
@@ -234,16 +229,15 @@
 <h3 id="mysql-injection">MySQL injection</h3>
 
 <p>The first code issue encountered was a sql injection. This is one of the first things to look for as it&rsquo;s fairly easy to spot and can be devestating. Most SQL libraries worth using have this protection built-in and all queries except one were using such protections.</p>
-<div class="highlight"><pre class="chroma"><code class="language-javascript" data-lang="javascript"><span class="s3e8">const</span><span class="s1f40"> </span><span class="s7df">column</span><span class="s1f40"> </span><span class="sfa0">=</span><span class="s1f40"> </span><span class="s7df">req</span><span class="s1388">.</span><span class="s7df">body</span><span class="s1388">.</span><span class="s7df">column</span><span class="s1388">;</span><span class="s1f40">
-</span><span class="s1f40"></span><span class="s7df">query</span><span class="s1388">(</span><span class="sc1c">`
-</span><span class="sc1c">	INSERT INTO
-</span><span class="sc1c">		table (id, </span><span class="sc1c">${</span><span class="s7df">column</span><span class="sc1c">}</span><span class="sc1c">)
-</span><span class="sc1c">	VALUES(?, ?)
-</span><span class="sc1c">	ON DUPLICATE KEY
-</span><span class="sc1c">		UPDATE SET </span><span class="sc1c">${</span><span class="s7df">column</span><span class="sc1c">}</span><span class="sc1c"> = ?`</span><span class="s1388">,</span><span class="s1f40">
-</span><span class="s1f40">	</span><span class="s1388">[</span><span class="s7df">id</span><span class="s1388">,</span><span class="s1f40"> </span><span class="s7df">value</span><span class="s1388">,</span><span class="s1f40"> </span><span class="s7df">value</span><span class="s1388">]</span><span class="s1f40">
-</span><span class="s1f40"></span><span class="s1388">);</span><span class="s1f40"> </span><span class="ss4">// (This is a bad idea)</span></code></pre>
-</div>
+<div class="highlight"><pre class="chroma"><code class="language-javascript" data-lang="javascript"><span class="k">const</span> <span class="nx">column</span> <span class="o">=</span> <span class="nx">req</span><span class="p">.</span><span class="nx">body</span><span class="p">.</span><span class="nx">column</span><span class="p">;</span>
+<span class="nx">query</span><span class="p">(</span><span class="sb">`
+</span><span class="sb">	INSERT INTO
+</span><span class="sb">		table (id, </span><span class="si">${</span><span class="nx">column</span><span class="si">}</span><span class="sb">)
+</span><span class="sb">	VALUES(?, ?)
+</span><span class="sb">	ON DUPLICATE KEY
+</span><span class="sb">		UPDATE SET </span><span class="si">${</span><span class="nx">column</span><span class="si">}</span><span class="sb"> = ?`</span><span class="p">,</span>
+	<span class="p">[</span><span class="nx">id</span><span class="p">,</span> <span class="nx">value</span><span class="p">,</span> <span class="nx">value</span><span class="p">]</span>
+<span class="p">);</span> <span class="err">// (This is a bad idea)</span></code></pre></div>
 <p>The creator wanted a function where he could pass any column and have that inserted, presumably to increase reusability but this is purely speculative.
 Because the library protects against injections it wouldn&rsquo;t let anyone pass a column, so the developer &ldquo;fixed&rdquo; this by simply injecting the string without any verification. SQL injections is a huge issue as it can potentially make the user able to read and modify all the data in the system meaning: All the sensitive data is exposed, you can&rsquo;t trust the data left there to be accurate, even with sufficiently securely hashed passwords it would be trivial to generate a new hash and use that to impersonate any other user in the system.
 Luckily the vulnerable route was behind an administrative login so the access were limited but it&rsquo;s a dangerous thing to keep around.
@@ -280,12 +274,11 @@ The answer to this question is going to change over time, as computers become mo
 <p>Symmetric algorithms are generally good enough in cases where you can trust both the issuers and verifiers but one blaring issue is using an insecure key. There&rsquo;s no need to type or remember this key so it should not be something memorable or easy to type, automatically generate a secret that is much longer than regular passwords and then use a completely different one in production. Brute forcing a secret can be done offline by taking any valid token reading it&rsquo;s payload and generating signatures of that payload by trying different secrets until a matching token is generated. After that secret is found it&rsquo;s possible to create and sign any tokens as if it were generated from the SSO.</p>
 
 <p>Imagine the following token</p>
-<div class="highlight"><pre class="chroma"><code class="language-json" data-lang="json"><span class="s1388">{</span><span class="s1f40">
-</span><span class="s1f40">	</span><span class="s7e2">&#34;id&#34;</span><span class="s1388">:</span><span class="s1f40"> </span><span class="sc1c">&#34;1234567890&#34;</span><span class="s1388">,</span><span class="s1f40">
-</span><span class="s1f40">	</span><span class="s7e2">&#34;name&#34;</span><span class="s1388">:</span><span class="s1f40"> </span><span class="sc1c">&#34;John Doe&#34;</span><span class="s1388">,</span><span class="s1f40">
-</span><span class="s1f40">	</span><span class="s7e2">&#34;admin&#34;</span><span class="s1388">:</span><span class="s1f40"> </span><span class="s3e8">false</span><span class="s1f40">
-</span><span class="s1f40"></span><span class="s1388">}</span></code></pre>
-</div>
+<div class="highlight"><pre class="chroma"><code class="language-json" data-lang="json"><span class="p">{</span>
+	<span class="nt">&#34;id&#34;</span><span class="p">:</span> <span class="s2">&#34;1234567890&#34;</span><span class="p">,</span>
+	<span class="nt">&#34;name&#34;</span><span class="p">:</span> <span class="s2">&#34;John Doe&#34;</span><span class="p">,</span>
+	<span class="nt">&#34;admin&#34;</span><span class="p">:</span> <span class="kc">false</span>
+<span class="p">}</span></code></pre></div>
 <p>The only thing preventing a user from changing admin from false to true, or changing id to whichever user they wish to impersonate is a valid signature, if the user has access to the secret this safeguard is gone and the token is not more secure than trusting arbitrary json recieved.</p>
 
 <h4 id="token-reuse">Token reuse</h4>
